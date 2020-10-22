@@ -20,6 +20,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+
 def search_for_magic(filename, start_line, magic_string, path):
     """Searches within files in the dictionary for magic strings.
     If lines with magic strings are found, the file name and line number
@@ -32,11 +33,13 @@ def search_for_magic(filename, start_line, magic_string, path):
                 continue
             found_item = line.find(magic_string)
             watch_dict[filename] = line_num + 1
-            if found_item!= -1:
+            if found_item != -1:
                 found_lines.append(line_num + 1)
         if len(found_lines) > 0:
-            logging.info(f"New Magic String Detected In {filename}, Line Numbers: {found_lines}") 
-     
+            logging.info(
+                f"New Magic String Detected In {filename}, Line Numbers: {found_lines}")
+
+
 def watch_directory(path, magic_string, extension, interval):
     """This function loops through the path to add files ending with .txt  
     to the dictionary. If a file is added, deleted or the path does
@@ -47,16 +50,19 @@ def watch_directory(path, magic_string, extension, interval):
         return
 
     file_list = os.listdir(path)
-    for k in watch_dict.items():
+    for k in list(watch_dict):
         if k not in file_list:
             logger.info(f"File Deleted {k}")
             watch_dict.pop(k)
+
     for filename in file_list:
         if filename not in watch_dict and filename.endswith(extension):
             logger.info(f"New File Added {filename}")
             watch_dict[filename] = 0
-        search_for_magic(filename, watch_dict[filename], magic_string, path)
-             
+        if filename.endswith(extension):
+            search_for_magic(
+                filename, watch_dict[filename], magic_string, path)
+
     return
 
 
@@ -66,9 +72,11 @@ def create_parser():
     filter, and magic string.
     """
     parser = argparse.ArgumentParser(description='Dirwatcher items')
-    parser.add_argument('-d', '--dir', help='directory that will be watched')
-    parser.add_argument('-i', '--int', default=1, help='seconds between polling')
-    parser.add_argument('-e', '--ext', default='txt', help='extension to be watched')
+    parser.add_argument('dir', help='directory that will be watched')
+    parser.add_argument('-i', '--int', default=1,
+                        help='seconds between polling')
+    parser.add_argument('-e', '--ext', default='txt',
+                        help='extension to be watched')
     parser.add_argument('text', help='magic text string to look for')
 
     arg = parser.parse_args()
@@ -84,15 +92,15 @@ def signal_handler(sig_num, frame):
     :return None
     """
     # log the associated signal name
-    
+
     if signal.Signals(sig_num).name == 'SIGINT':
         logger.warning('Received ' + signal.Signals(sig_num).name)
-       
-    if signal.Signals(sig_num).name == 'SIGTERM':
-        logger.warning('Received ' + signal.Signals(sig_num).name) 
 
-    global exit_flag 
-    exit_flag = True   
+    if signal.Signals(sig_num).name == 'SIGTERM':
+        logger.warning('Received ' + signal.Signals(sig_num).name)
+
+    global exit_flag
+    exit_flag = True
     logger.info("Program Shutdown....")
     return
 
@@ -100,14 +108,15 @@ def signal_handler(sig_num, frame):
 def main(args):
     """Parses args, runs signal and exception handlers"""
     args = create_parser()
-    
+
     # Hook into these two signals from the OS
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     # Now my signal_handler will get called if OS sends
     # either of these to my process.
 
-    logger.info(f"Starting to watch directory {args.dir} for text of {args.text}")
+    logger.info(
+        f"Starting to watch directory {args.dir} for text of {args.text}")
     while not exit_flag:
         try:
             watch_directory(args.dir, args.text, args.ext, args.int)
@@ -115,7 +124,7 @@ def main(args):
             # call my directory watching function
             pass
         except Exception as e:
-            print(e)
+            logger.error(e)
             # This is an UNHANDLED exception
             # Log an ERROR level message here
             pass
@@ -126,6 +135,7 @@ def main(args):
     # final exit point happens here
     # Log a message that we are shutting down
     # Include the overall uptime since program start
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])
